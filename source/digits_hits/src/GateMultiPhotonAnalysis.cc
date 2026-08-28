@@ -9,6 +9,7 @@ See LICENSE.md for further details
 #include "GateMultiPhotonAnalysis.hh"
 
 #include "GateActions.hh"
+#include "GateAnalysis.hh"
 #include "GateDigitizerMgr.hh"
 #include "GateHit.hh"
 #include "GateMultiPhotonAnalysisMessenger.hh"
@@ -101,6 +102,33 @@ std::string LocateVolumeName(const G4ThreeVector &position) {
     return MultiPhotonAnalysisHelpers::kNoVolumeName;
   }
   return volume->GetName();
+}
+
+int CountSeptalHits(GatePhantomHitsCollection *PHC) {
+  // Septal penetration is configured on the GateAnalysis module (setSeptalVolumeName and
+  // recordSeptalPenetration), so the settings are read from there - the same way GateRootDefs
+  // does it when deciding whether to create the septalNb branch.
+  // The counting rule is copied from GateAnalysis: every phantom hit recorded in the septal
+  // volume increments the counter, with no per-photon attribution, and the resulting event
+  // total is written to all crystal hits.
+  GateAnalysis *analysis =
+      dynamic_cast<GateAnalysis *>(GateOutputMgr::GetInstance()->GetModule("analysis"));
+  if (!analysis || !analysis->GetRecordSeptalFlag() || !PHC) {
+    return 0;
+  }
+
+  const G4String &septalVolumeName = analysis->GetSeptalPhysVolumeName();
+
+  int septalNb = 0;
+  const G4int NpHits = PHC->entries();
+  for (G4int iPHit = 0; iPHit < NpHits; ++iPHit) {
+    GatePhantomHit *phantomHit = (*PHC)[iPHit];
+    if (phantomHit && phantomHit->GetPhysVolName() == septalVolumeName) {
+      ++septalNb;
+    }
+  }
+
+  return septalNb;
 }
 
 std::unordered_map<int, MultiPhotonAnalysisHelpers::PhantomStatistics> ComputePhantomTotals(
@@ -200,6 +228,7 @@ void ProcessTimeline(
     GateMultiPhotonTrajectoryNavigator *trajectoryNavigator,
     const EventContext &context,
     const std::unordered_map<int, MultiPhotonAnalysisHelpers::PhantomStatistics> &phantomTotals,
+    int septalNb,
     int legacyPhotonIDPolicy) {
   const MultiPhotonAnalysisHelpers::PhantomStatistics kNoPhantomStatistics;
 
@@ -264,6 +293,7 @@ void ProcessTimeline(
     hit->SetRunID(context.run_id);
     hit->SetNCrystalCompton(runningStats.crystalCompton);
     hit->SetNCrystalRayleigh(runningStats.crystalRayleigh);
+    hit->SetNSeptal(septalNb);
     // nInteractions is intentionally filled only in the multiphoton analysis path.
     hit->SetNInteractions(runningStats.scatters);
   }
@@ -416,6 +446,7 @@ void GateMultiPhotonAnalysis::RecordEndOfEvent(const G4Event *event) {
   std::vector<TimelineEntry> basePhantomTimeline = BuildBasePhantomTimeline(PHC);
   const std::unordered_map<int, MultiPhotonAnalysisHelpers::PhantomStatistics> phantomTotals =
       ComputePhantomTotals(PHC, m_trajectoryNavigator);
+  const int septalNb = CountSeptalHits(PHC);
   const EventContext context = BuildEventContext(event, runManager, m_trajectoryNavigator);
   const int legacyPhotonIDPolicy = ResolveLegacyPhotonIDPolicy();
 
@@ -426,7 +457,8 @@ void GateMultiPhotonAnalysis::RecordEndOfEvent(const G4Event *event) {
     }
 
     std::vector<TimelineEntry> timeline = BuildTimelineForCrystalCollection(basePhantomTimeline, CHC);
-    ProcessTimeline(&timeline, m_trajectoryNavigator, context, phantomTotals, legacyPhotonIDPolicy);
+    ProcessTimeline(&timeline, m_trajectoryNavigator, context, phantomTotals, septalNb,
+                    legacyPhotonIDPolicy);
   }
 
   RunDigitizersIfNeeded();
