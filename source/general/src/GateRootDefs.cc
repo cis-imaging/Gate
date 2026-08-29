@@ -478,7 +478,7 @@ void GateRootSingleBuffer::Clear()
   // HDS : septal
   septalNb = 0;
 
-  // Information from ExtendedVSource: zero and -1 mean 'not known', as in the hit buffer
+  // Information from  PositroniumSource: zero and -1 mean 'not known', as in the hit buffer
   sourceType = 0;
   decayType = 0;
   gammaType = 0;
@@ -558,7 +558,7 @@ void GateRootSingleBuffer::Fill(GateDigi* aDigi)
   // HDS : septal penetration
   septalNb = aDigi->GetNSeptal();
 
-  // Information from ExtendedVSource plus the interaction counter
+  // Information from  PositroniumSource plus the interaction counter
   sourceType = aDigi->GetSourceType();
   decayType = aDigi->GetDecayType();
   gammaType = aDigi->GetGammaType();
@@ -718,7 +718,7 @@ GateDigi* GateRootSingleBuffer::CreateDigi()
   // Septal penetration
   aDigi->SetNSeptal(septalNb);
 
-  // Information from ExtendedVSource plus the interaction counter
+  // Information from  PositroniumSource plus the interaction counter
   aDigi->SetSourceType(sourceType);
   aDigi->SetDecayType(decayType);
   aDigi->SetGammaType(gammaType);
@@ -804,7 +804,7 @@ void GateSingleTree::Init(GateRootSingleBuffer& buffer)
 	  // HDS : record septal penetration
 	  if (GateRootDefs::GetRecordSeptalFlag())	Branch("septalNb",   &buffer.septalNb,"septalNb/I");
 
-  // Information from ExtendedVSource plus the interaction counter, propagated from the hit.
+  // Information from  PositroniumSource plus the interaction counter, propagated from the hit.
   // The same branches exist in the Hits tree; nInteractions is filled by
   // GateMultiPhotonAnalysis only and stays at -1 on the classical GateAnalysis path.
   Branch("sourceType",    &buffer.sourceType,"sourceType/I");
@@ -1150,7 +1150,7 @@ void GateCoincTree::Init(GateRootCoincBuffer& buffer)
   if ( GateCoincidenceDigi::GetCoincidenceASCIIMask(21) )
     Branch("RayleighVolName2",  (void *)buffer.RayleighVolumeName2,"RayleighVolName2/C");
 
-  // Information from ExtendedVSource plus the interaction counter, propagated from the hit
+  // Information from PositroniumSource plus the interaction counter, propagated from the hit
   // through the digi of each arm; same branches as in the Singles tree, with the 1/2 suffix
   Branch("sourceType1",    &buffer.sourceType1,"sourceType1/I");
   Branch("decayType1",     &buffer.decayType1,"decayType1/I");
