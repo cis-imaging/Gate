@@ -232,6 +232,46 @@ If you want to disable the whole ROOT output, just do not call it, or use the fo
    /gate/output/root/disable
 
 
+.. _decay_branches_root_output-label:
+
+Branches describing the decay and the interaction counters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``PositroniumSource`` attaches four integer fields to every emitted gamma: ``sourceType``, ``decayType``, ``gammaType`` and ``decayIndex``. Their values are listed in :ref:`positronium_source_branches-label`. A fifth field, ``nInteractions``, counts the Compton and Rayleigh scatterings along the path of the photon and is filled by the ``multianalysis`` output module (``GateMultiPhotonAnalysis``) only.
+
+All five fields describe the decay and the photon rather than the individual energy deposit, so they survive digitization and are written to the three ROOT trees:
+
+.. list-table:: Branches propagated to the ROOT trees
+   :widths: 20 40 40
+   :header-rows: 1
+   :name: decay_branches_root_trees
+
+   * - Tree
+     - Branch names
+     - Source of the value
+   * - ``Hits``
+     - ``sourceType``, ``decayType``, ``gammaType``, ``decayIndex``, ``nInteractions``
+     - the hit itself
+   * - ``Singles``
+     - same names
+     - copied from the hit, then merged by the digitizer
+   * - ``Coincidences``
+     - same names with the ``1`` and ``2`` suffix, one per arm
+     - the two digis forming the pair
+
+Merging rules follow the convention already used for ``sourceEnergy`` and ``sourcePDG``:
+
+* ``sourceType`` and ``decayIndex`` describe the decay, and all gammas of one event come from the same decay, so merging cannot produce a conflict;
+* ``decayType`` and ``gammaType`` describe a single gamma. When hits of gammas of different kinds are merged in one crystal - an annihilation gamma and a prompt gamma, for instance - the value falls back to the "not known" value of the enum, that is ``0``;
+* ``decayIndex`` falls back to ``-1`` for the same reason;
+* ``nInteractions`` is merged with the maximum, like ``nPhantomCompton``.
+
+Files written by older versions of GATE do not contain these branches in ``Singles`` and ``Coincidences``; reading such a file keeps the buffer at its "not known" value instead of failing.
+
+.. note::
+
+   The unified tree output (:ref:`new_unified_tree_output_general_set-label`) writes ``sourceType``, ``decayType``, ``gammaType`` and ``decayIndex`` for hits only, and does not write ``nInteractions`` at all. Use the ROOT output described here if you need those fields at the Singles or Coincidences level.
+
 Using TBrowser To Browse ROOT Objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
