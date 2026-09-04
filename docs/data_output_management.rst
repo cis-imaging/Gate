@@ -196,6 +196,66 @@ generation (Poisson law). Gate generates the time delay from the
 previous event, if it is out of the time slice it stops the event 
 processing for the current time slice and if needed it starts a new time slice.
 
+.. _analysis_output_modules-label:
+
+Analysis output modules
+-----------------------
+
+A sensitive detector records the energy deposit, the position and the process name of every hit, but not the Monte Carlo information describing the *history* of the detected photon: the event and source it belongs to, how many times it scattered in the phantom and in the crystal before being absorbed, and in which volume the last scattering took place.
+Those attributes are filled at the end of each event by an **analysis output module**, which then triggers the digitizer, so every Single and every Coincidence inherits them.
+
+Three modules implement that step and they are mutually exclusive: **exactly one has to be enabled** whenever Singles or Coincidences are written. With none of them enabled GATE stops the simulation with::
+
+   ***ERROR*** Digitizer Manager is not initialized properly. Please, enable analysis,
+   fastanalysis or multianalysis Output Modules to write down Singles or Coincidences.
+
+.. list-table:: Analysis output modules
+   :widths: 22 30 48
+   :header-rows: 1
+   :name: analysis_output_modules_table
+
+   * - Module
+     - Command
+     - Purpose
+   * - ``analysis``
+     - ``/gate/output/analysis/enable`` (enabled by default)
+     - Reference implementation. Fills every attribute, but assigns the interaction counters only to the two annihilation gammas of an event.
+   * - ``fastanalysis``
+     - ``/gate/output/fastanalysis/enable``
+     - Speed-oriented variant. Fills only ``runID``, ``eventID`` and ``sourceID``; every other attribute is set to ``-1`` or ``"NULL"`` to mark it as not computed.
+   * - ``multianalysis``
+     - ``/gate/output/multianalysis/enable``
+     - Multi-photon variant, see below. Fills the same attributes as ``analysis`` plus ``nInteractions``, and does so for every emitted gamma.
+
+Remember to disable the module you are replacing, since ``analysis`` is enabled by default::
+
+   /gate/output/analysis/disable
+   /gate/output/fastanalysis/disable
+   /gate/output/multianalysis/enable
+
+The multi-photon analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``GateMultiPhotonAnalysis`` targets sources that emit more than two gammas per decay - ortho-positronium, which decays into three gammas, and de-excitation (prompt) gammas emitted alongside the annihilation pair. ``GateAnalysis`` resolves exactly two annihilation gammas per event, so hits belonging to a third gamma or to a prompt gamma keep zeroed counters; ``multianalysis`` builds the set of reference photons from the event itself and follows each of them separately.
+
+For decays into two gammas both modules agree: ``eventID``, ``trackID``, ``parentID``, ``processName``, ``nPhantomCompton``, ``nCrystalCompton``, ``nPhantomRayleigh``, ``nCrystalRayleigh``, ``comptVolName`` and ``RayleighVolName`` are filled identically.
+
+Two differences are deliberate:
+
+* ``nInteractions`` is filled **only** by ``multianalysis``. It counts the Compton and Rayleigh scatterings along the path of the photon, the current hit included, and grows along the whole history of that photon. On the ``analysis`` and ``fastanalysis`` paths the branch stays at ``-1``, which means "not computed".
+* ``photonID`` is always ``0``. In ``GateAnalysis`` the field distinguishes the first from the second annihilation gamma, which has no meaning once an event may contain three gammas or a prompt gamma; ``trackID`` identifies the photon instead.
+
+A typical macro looks like this::
+
+   /gate/output/analysis/disable
+   /gate/output/fastanalysis/disable
+   /gate/output/multianalysis/enable
+
+   /gate/output/root/enable
+   /gate/output/root/setFileName data
+   /gate/output/root/setRootHitFlag     1
+   /gate/output/root/setRootSinglesFlag 1
+
 .. _root_output-label:
 
 Root output
