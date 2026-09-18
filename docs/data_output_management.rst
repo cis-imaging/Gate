@@ -240,10 +240,11 @@ The multi-photon analysis
 
 For decays into two gammas both modules agree: ``eventID``, ``trackID``, ``parentID``, ``processName``, ``nPhantomCompton``, ``nCrystalCompton``, ``nPhantomRayleigh``, ``nCrystalRayleigh``, ``comptVolName`` and ``RayleighVolName`` are filled identically.
 
-Two differences are deliberate:
+Three differences are deliberate:
 
 * ``nInteractions`` is filled **only** by ``multianalysis``. It counts the Compton and Rayleigh scatterings along the path of the photon, the current hit included, and grows along the whole history of that photon. On the ``analysis`` and ``fastanalysis`` paths the branch stays at ``-1``, which means "not computed".
 * ``photonID`` is always ``0``. In ``GateAnalysis`` the field distinguishes the first from the second annihilation gamma, which has no meaning once an event may contain three gammas or a prompt gamma; ``trackID`` identifies the photon instead.
+* septal penetration is configured through the ``analysis`` module even when it is disabled. ``/gate/output/analysis/setSeptalVolumeName`` and ``/gate/output/analysis/recordSeptalPenetration`` keep working, and ``multianalysis`` reads that configuration to fill ``septalNb`` exactly like ``GateAnalysis`` does.
 
 A typical macro looks like this::
 
