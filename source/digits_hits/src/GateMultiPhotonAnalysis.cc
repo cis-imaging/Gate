@@ -185,29 +185,47 @@ EventContext BuildEventContext(
   return context;
 }
 
-std::vector<TimelineEntry> BuildTimelineForCrystalCollection(
+//! Builds one timeline for the whole event: the phantom hits plus the crystal hits of every
+//! collection. A photon crossing two sensitive detectors leaves hits in two collections, and
+//! its counters have to keep growing along the whole path - hence a single timeline instead
+//! of one per collection. This is the equivalent of the multi_detector path of GateAnalysis.
+std::vector<TimelineEntry> BuildTimelineForCrystalCollections(
     const std::vector<TimelineEntry> &basePhantomTimeline,
-    GateHitsCollection *CHC) {
+    const std::vector<GateHitsCollection *> &CHC_vector) {
   std::vector<TimelineEntry> timeline = basePhantomTimeline;
   std::size_t sequence = timeline.size();
 
-  const G4int NbHits = CHC->entries();
-  timeline.reserve(basePhantomTimeline.size() + static_cast<std::size_t>(NbHits));
-  for (G4int iHit = 0; iHit < NbHits; ++iHit) {
-    GateHit *crystalHit = (*CHC)[iHit];
-    if (!crystalHit) {
+  std::size_t crystalHits = 0;
+  for (std::size_t iColl = 0; iColl < CHC_vector.size(); ++iColl) {
+    if (CHC_vector[iColl]) {
+      crystalHits += static_cast<std::size_t>(CHC_vector[iColl]->entries());
+    }
+  }
+  timeline.reserve(basePhantomTimeline.size() + crystalHits);
+
+  for (std::size_t iColl = 0; iColl < CHC_vector.size(); ++iColl) {
+    GateHitsCollection *CHC = CHC_vector[iColl];
+    if (!CHC) {
       continue;
     }
 
-    // Hits whose gamma cannot be resolved are kept as well: they receive zeroed counters,
-    // but eventID, runID and the remaining attributes are filled in like in GateAnalysis.
-    TimelineEntry entry;
-    entry.time = crystalHit->GetTime();
-    entry.sequence = sequence++;
-    entry.is_phantom = false;
-    entry.track_id = crystalHit->GetTrackID();
-    entry.crystal_hit = crystalHit;
-    timeline.push_back(entry);
+    const G4int NbHits = CHC->entries();
+    for (G4int iHit = 0; iHit < NbHits; ++iHit) {
+      GateHit *crystalHit = (*CHC)[iHit];
+      if (!crystalHit) {
+        continue;
+      }
+
+      // Hits whose gamma cannot be resolved are kept as well: they receive zeroed counters,
+      // but eventID, runID and the remaining attributes are filled in like in GateAnalysis.
+      TimelineEntry entry;
+      entry.time = crystalHit->GetTime();
+      entry.sequence = sequence++;
+      entry.is_phantom = false;
+      entry.track_id = crystalHit->GetTrackID();
+      entry.crystal_hit = crystalHit;
+      timeline.push_back(entry);
+    }
   }
 
   std::sort(timeline.begin(), timeline.end(), [](const TimelineEntry &a, const TimelineEntry &b) {
@@ -476,16 +494,12 @@ void GateMultiPhotonAnalysis::RecordEndOfEvent(const G4Event *event) {
   const EventContext context = BuildEventContext(event, runManager, m_trajectoryNavigator);
   const int legacyPhotonIDPolicy = ResolveLegacyPhotonIDPolicy();
 
-  for (size_t i = 0; i < CHC_vector.size(); ++i) {
-    GateHitsCollection *CHC = CHC_vector[i];
-    if (!CHC) {
-      continue;
-    }
-
-    std::vector<TimelineEntry> timeline = BuildTimelineForCrystalCollection(basePhantomTimeline, CHC);
-    ProcessTimeline(&timeline, m_trajectoryNavigator, context, phantomTotals, septalNb,
-                    legacyPhotonIDPolicy);
-  }
+  // One timeline for every collection of the event, so that the running counters follow the
+  // photon across sensitive detectors instead of restarting in each collection.
+  std::vector<TimelineEntry> timeline =
+      BuildTimelineForCrystalCollections(basePhantomTimeline, CHC_vector);
+  ProcessTimeline(&timeline, m_trajectoryNavigator, context, phantomTotals, septalNb,
+                  legacyPhotonIDPolicy);
 }
 
 void GateMultiPhotonAnalysis::RecordStepWithVolume(const GateVVolume *, const G4Step *) {
