@@ -242,7 +242,7 @@ For decays into two gammas both modules agree: ``eventID``, ``trackID``, ``paren
 
 Three differences are deliberate:
 
-* ``nInteractions`` is filled **only** by ``multianalysis``. It counts the Compton and Rayleigh scatterings along the path of the photon, the current hit included, and grows along the whole history of that photon. On the ``analysis`` and ``fastanalysis`` paths the branch stays at ``-1``, which means "not computed".
+* ``nInteractions`` is filled **only** by ``multianalysis``. It counts the Compton and Rayleigh scatterings along the path of the photon, the current hit included, and grows along the whole history of that photon - also across sensitive detectors, so a hit in the second layer of a phoswich continues the count from the first one. On the ``analysis`` and ``fastanalysis`` paths the branch stays at ``-1``, which means "not computed".
 * ``photonID`` is always ``0``. In ``GateAnalysis`` the field distinguishes the first from the second annihilation gamma, which has no meaning once an event may contain three gammas or a prompt gamma; ``trackID`` identifies the photon instead.
 * septal penetration is configured through the ``analysis`` module even when it is disabled. ``/gate/output/analysis/setSeptalVolumeName`` and ``/gate/output/analysis/recordSeptalPenetration`` keep working, and ``multianalysis`` reads that configuration to fill ``septalNb`` exactly like ``GateAnalysis`` does.
 
