@@ -142,7 +142,7 @@ public:
       inline G4int GetNSeptal() const { return m_nSeptal; }
       inline void SetNSeptal(G4int septalNb) { m_nSeptal = septalNb; }
 
-      //! \name Information coming from ExtendedVSource, copied from the hit
+      //! \name Information coming from PositroniumSource, copied from the hit
       //! The enums are defined in GateEmittedGammaInformation.hh. Merging keeps the value
       //! when the merged digis agree and falls back to the "not known" value when they do
       //! not, exactly like m_sourceEnergy / m_sourcePDG.
@@ -262,7 +262,7 @@ public:
   #endif
   G4int m_nSeptal;				  //!< HDS : record septal penetration
 
-  // Information from ExtendedVSource, copied from the hit (see GateEmittedGammaInformation.hh)
+  // Information from PositroniumSource, copied from the hit (see GateEmittedGammaInformation.hh)
   G4int m_sourceType;             //!< kind of gamma source; 0 means 'not known'
   G4int m_decayType;              //!< kind of positronium decay; 0 means 'not known'
   G4int m_gammaType;              //!< kind of gamma: single, annihilation, prompt; 0 means 'not known'
