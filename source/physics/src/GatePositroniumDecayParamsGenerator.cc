@@ -5,7 +5,9 @@
   See LICENSE.md for further details
   ----------------------*/
 
-#include <cassert>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "GateMessageManager.hh"
 #include "GatePositroniumHelper.hh"
@@ -47,96 +49,106 @@ void GatePositroniumDecayParamsGenerator::SetMeanPositronRange(const std::vector
 }
 
 
+void GatePositroniumDecayParamsGenerator::RaiseErrorIfModelParamsNotSet() const
+{
+  const std::vector<std::pair<std::string, bool>> paramsSet = {
+    {"Decay kinds", fDecayKinds.has_value()},
+    {"Positron interactions", fPositronInteractions.has_value()},
+    {"Positronium decay fractions", fPositroniumFractions.has_value()},
+    {"Positronium lifetimes", fPositroniumLifetimes.has_value()},
+    {"Prompt gamma probabilities", fPromptGammaProbabilities.has_value()},
+    {"Prompt gamma energies", fPromptGammaEnergies.has_value()}
+  };
+  for (const auto& [name, isSet] : paramsSet) {
+    if (!isSet) {
+      GateError("GatePositroniumDecayParamsGenerator::RaiseErrorIfModelParamsNotSet: "
+                << name << " are not set");
+    }
+  }
+}
+
+void GatePositroniumDecayParamsGenerator::RaiseErrorIfModelParamsSizesDiffer() const
+{
+  // The number of channels is defined by setDecayKinds; every other vector must match it.
+  const std::size_t nChannels = fDecayKinds->size();
+  if (nChannels == 0) {
+    GateError("GatePositroniumDecayParamsGenerator::RaiseErrorIfModelParamsSizesDiffer: "
+              "Decay kinds are empty");
+  }
+
+  std::vector<std::pair<std::string, std::size_t>> paramsSize = {
+    {"Positron interactions", fPositronInteractions->size()},
+    {"Positronium decay fractions", fPositroniumFractions->size()},
+    {"Positronium lifetimes", fPositroniumLifetimes->size()},
+    {"Prompt gamma probabilities", fPromptGammaProbabilities->size()},
+    {"Prompt gamma energies", fPromptGammaEnergies->size()}
+  };
+  if (fElectronCaptureProbabilities.has_value()) {
+    paramsSize.emplace_back("Electron capture probabilities", fElectronCaptureProbabilities->size());
+  }
+  if (fMeanPositronRange.has_value()) {
+    paramsSize.emplace_back("Mean positron ranges", fMeanPositronRange->size());
+  }
+
+  for (const auto& [name, size] : paramsSize) {
+    if (size != nChannels) {
+      GateError("GatePositroniumDecayParamsGenerator::RaiseErrorIfModelParamsSizesDiffer: "
+                << name << " have " << size << " elements, but decay kinds define "
+                << nChannels << " channels");
+    }
+  }
+}
+
 PositroniumDecayModelParams GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams() const
 {
-  PositroniumDecayModelParams params;
+  RaiseErrorIfModelParamsNotSet();
+  RaiseErrorIfModelParamsSizesDiffer();
+
+  // Every user-defined component is exactly one channel of the model (setDecayKinds and
+  // setPositronInteractions are both required). Nothing is expanded here, so all vectors
+  // have nChannels elements and are indexed by the same decayIndex.
+  const std::size_t nChannels = fDecayKinds->size();
   GatePositroniumHelper positronHelper;
-  if(fPositroniumFractions.has_value()) {
-    params.fFractions=positronHelper.NormalizeFractions(fPositroniumFractions.value());
-  } else {
-    GateError("GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: Positronium decay fractions are not set");
-  }
 
-  if(fPositroniumLifetimes.has_value()) {
-    params.fLifetimes=fPositroniumLifetimes.value();
-  } else {
-    GateError("GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: Positronium lifetimes are not set");
-  }
+  PositroniumDecayModelParams params;
+  params.fDecayKind = *fDecayKinds;
+  params.fPositronInteractions = *fPositronInteractions;
+  params.fFractions = positronHelper.NormalizeFractions(*fPositroniumFractions);
+  params.fLifetimes = *fPositroniumLifetimes;
+  params.fPromptGammaProbabilities = *fPromptGammaProbabilities;
+  params.fPromptGammaEnergy = *fPromptGammaEnergies;
+  params.fElectronCaptureProbabilities =
+    fElectronCaptureProbabilities.value_or(std::vector<float>(nChannels, 0.0f));
+  params.fMeanPositronRange = fMeanPositronRange.value_or(std::vector<float>(nChannels, 0.0f));
+  params.fMeanPositronRangeEnabled.assign(nChannels, fMeanPositronRange.has_value());
 
-  if(fPositronInteractions.has_value()) {
-    params.fPositronInteractions=fPositronInteractions.value();
-  } else if (!fDecayKinds.has_value()) {
-    GateError("GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: Positronium interactions are not set and decay kinds are also empty");
-  }
-
-  if(fPromptGammaProbabilities.has_value()) {
-    params.fPromptGammaProbabilities=fPromptGammaProbabilities.value();
-  } else {
-    GateError("GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: Positronium prompt gamma probabilities are not set");
-  }
-
-  if(fPromptGammaEnergies.has_value()) {
-    params.fPromptGammaEnergy=fPromptGammaEnergies.value();
-  } else {
-    GateError("GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: Prompt gamma energies are not set");
-  }
-
-  auto nElements = fPositroniumFractions.value().size();
-  if(fElectronCaptureProbabilities.has_value()) {
-    params.fElectronCaptureProbabilities=fElectronCaptureProbabilities.value();
-  } else {
-    params.fElectronCaptureProbabilities.assign(nElements, 0.0);
-  }
-
-  if(fDecayKinds.has_value()) {
-    params.fDecayKind=fDecayKinds.value();
-  } else if (!params.fPositronInteractions.empty() && !params.fLifetimes.empty() && !params.fFractions.empty()) {
-    params = positronHelper.CalculateFractionsFromLifetimes(params);
-  } else {
-    GateError("GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: Positronium decay kinds are not set and one or more sets that can calculate them (positronInteractions, lifetimes or fractions) is/are empty");
-  }
-
-  if(fMeanPositronRange.has_value()) {
-    params.fMeanPositronRangeEnabled.assign(nElements, true);
-    params.fMeanPositronRange=fMeanPositronRange.value();
-  } else {
-    params.fMeanPositronRangeEnabled.assign(nElements, false);
-    params.fMeanPositronRange.assign(nElements, 0.0);
-  }
-
-validatePositroniumDecayParams(params);
-
-return params;
+  validatePositroniumDecayParams(params);
+  return params;
 }
 
 void GatePositroniumDecayParamsGenerator::validatePositroniumDecayParams(const PositroniumDecayModelParams& params) const
 {
-  auto ref_param_number = params.fDecayKind.size();
-  bool size_mismatch = (ref_param_number != params.fFractions.size()) ||
-                       (ref_param_number != params.fPromptGammaProbabilities.size()) ||
-                       (ref_param_number != params.fLifetimes.size()) ||
-                       (ref_param_number != params.fPromptGammaEnergy.size()) ||
-                       (ref_param_number != params.fElectronCaptureProbabilities.size());
-  if (size_mismatch) {
-    std::cout << ref_param_number << " " << params.fFractions.size() << " " << params.fPromptGammaProbabilities.size() << " " << params.fLifetimes.size() << " " << params.fPromptGammaEnergy.size() << params.fElectronCaptureProbabilities.size() << std::endl;
-    GateError(
-        "GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams: "
-        "number of provided parameters in Fractions, PromptGamma, Lifetimes, "
-        "Gamma Energies, Electron Capture Probabilities are not the same");
+  // Invariant of the final structure: GatePositroniumDecayModel indexes each of these
+  // vectors by the channel index, so all of them must have as many elements as fDecayKind.
+  const std::size_t nChannels = params.fDecayKind.size();
+  const bool sizeMismatch = (params.fFractions.size() != nChannels) ||
+                            (params.fLifetimes.size() != nChannels) ||
+                            (params.fPositronInteractions.size() != nChannels) ||
+                            (params.fPromptGammaProbabilities.size() != nChannels) ||
+                            (params.fPromptGammaEnergy.size() != nChannels) ||
+                            (params.fElectronCaptureProbabilities.size() != nChannels) ||
+                            (params.fMeanPositronRangeEnabled.size() != nChannels) ||
+                            (params.fMeanPositronRange.size() != nChannels);
+  if (sizeMismatch) {
+    GateError("GatePositroniumDecayParamsGenerator::validatePositroniumDecayParams: "
+              "not every per-channel parameter vector has " << nChannels << " elements");
   }
-  if (params.fPositronInteractions.empty())
-    GateWarning("PositroniumSource: setPositronInteractions was not called. "
-                "sourceType in ROOT output will be 1 (SingleGammaEmitter, the generic default) "
-                "instead of 2 (ParaPositronium), 3 (OrthoPositronium), or 4 (DirectAnnihilation). "
-                "Note: k2Gamma does not uniquely imply pPs — oPs pick-off/quenching also produces 2 gammas, "
-                "so sourceType cannot be safely inferred from decayKind alone. "
-                "Call setPositronInteractions with kParaPs, kOrthoPs, or kDirect for correct sourceType tagging.");
 
   constexpr double kProb_of_no_particle_limit = 0.9;
-  for (int i = 0; i < ref_param_number; i++) {
-    auto electron_capture_prob = params.fElectronCaptureProbabilities[i];
-    auto no_prompt_prob = 1 -params.fPromptGammaProbabilities[i];
-    if (electron_capture_prob *no_prompt_prob >= kProb_of_no_particle_limit) {
+  for (std::size_t i = 0; i < nChannels; ++i) {
+    const double electronCaptureProb = params.fElectronCaptureProbabilities[i];
+    const double noPromptProb = 1.0 - params.fPromptGammaProbabilities[i];
+    if (electronCaptureProb * noPromptProb >= kProb_of_no_particle_limit) {
       GateWarning("The probability of 0 prompt emission times probability of electron capture (no anihillation) is larger than 90%. Please check channel definitions! Otherwise simulations can take a lot of time");
     }
   }

@@ -48,6 +48,9 @@ public:
 
 
 private:
+  void RaiseErrorIfModelParamsNotSet() const;
+  void RaiseErrorIfModelParamsSizesDiffer() const;
+
   std::optional<std::vector<float>> fPositroniumFractions;
   std::optional<std::vector<float>> fPositroniumLifetimes;
   std::optional<std::vector<float>> fPromptGammaProbabilities;
@@ -55,7 +58,6 @@ private:
   std::optional<std::vector<float>> fElectronCaptureProbabilities;
   std::optional<std::vector<PositroniumDecayKind>> fDecayKinds;
   std::optional<std::vector<PositronElectronInteraction>> fPositronInteractions;
-  std::optional<std::vector<bool>> fMeanPositronRangeEnabled;
   std::optional<std::vector<float>> fMeanPositronRange;
 };
 #endif
