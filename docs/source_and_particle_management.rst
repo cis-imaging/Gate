@@ -817,7 +817,7 @@ Required commands
 ^^^^^^^^^^^^^^^^^
 
 ``/gate/source/NAME/setPositroniumFractions f1 f2 ... fn``
-   Relative weights of the configured components. The implementation normalizes the vector internally, but the values should represent the intended relative intensities.
+   Relative weights of the configured components. The implementation normalizes the vector internally, but the values should represent the intended relative intensities. The weights must be non-negative and their sum must be positive; a component with weight ``0`` is never sampled.
 
 ``/gate/source/NAME/setPositroniumLifetimes t1 t2 ... tn unit``
    Lifetime of each component. The last token is a Geant4 time unit such as ``ns``.
@@ -828,17 +828,15 @@ Required commands
 ``/gate/source/NAME/setPromptPhotonEnergies e1 e2 ... en unit``
    Prompt-gamma energies for each component. The last token is a Geant4 energy unit such as ``keV`` or ``MeV``.
 
-One of the following commands must also be provided:
-
 ``/gate/source/NAME/setDecayKinds k1 k2 ... kn``
-   Explicit annihilation channel selection for each component. Allowed values are ``k2Gamma`` and ``k3Gamma``.
+   Annihilation channel of each component. Allowed values are ``k2Gamma`` and ``k3Gamma``. The number of entries defines the number of components; every other per-component vector must have the same length.
 
 ``/gate/source/NAME/setPositronInteractions k1 k2 ... kn``
-   Interaction type assigned to each component. Allowed values are ``kParaPs``, ``kDirect`` and ``kOrthoPs``. This command is used by the model to derive the ``sourceType`` metadata stored in the **Hits**, **Singles** and **Coincidences** trees. It can also be used instead of ``setDecayKinds`` to derive the 2-gamma and 3-gamma contributions from the theory.
+   Interaction type assigned to each component. Allowed values are ``kParaPs``, ``kDirect`` and ``kOrthoPs``. It is used to derive the ``sourceType`` metadata stored in the **Hits**, **Singles** and **Coincidences** trees. A ``kParaPs`` component must use ``k2Gamma``; ``kOrthoPs`` and ``kDirect`` components may use either decay kind.
 
 .. note::
 
-   The current implementation can build the decay model from ``setDecayKinds`` alone, but the ``sourceType`` metadata written to the output trees is derived from ``setPositronInteractions``. In practice, if you want a fully consistent ``PositroniumSource`` configuration and meaningful ``sourceType`` values, define ``setPositronInteractions`` as well.
+   Each component is exactly one decay channel of the model: the source does not derive the 2-gamma and 3-gamma contributions from the lifetimes. To model, for example, ortho-positronium with pick-off annihilation, define two components with ``kOrthoPs``, one with ``k3Gamma`` and one with ``k2Gamma``, and set their fractions accordingly.
 
 Optional commands
 ^^^^^^^^^^^^^^^^^
@@ -851,7 +849,7 @@ Optional commands
 
 .. note::
 
-   In the explicit ``setDecayKinds`` workflow, all parameter vectors must describe the same number of components. This applies to the fractions, lifetimes, decay kinds, prompt-gamma probabilities, prompt-gamma energies and, when used, electron-capture probabilities and mean positron ranges.
+   All parameter vectors must describe the same number of components. This applies to the decay kinds, positron interactions, fractions, lifetimes, prompt-gamma probabilities, prompt-gamma energies and, when used, electron-capture probabilities and mean positron ranges. A missing required command or a vector of a different length stops the simulation with an error message naming the offending parameter.
 
 .. note::
 
@@ -867,7 +865,7 @@ For each event, the source first samples the source time and position from the s
 
 If ``setMeanPositronRange`` is used, the annihilation vertex position is additionally smeared around the sampled source position.
 
-If the electron-capture probability is very high and the prompt-gamma probability is very low, event generation can become inefficient because the source retries until at least one primary vertex is created. The code emits a warning when the probability of producing neither a prompt gamma nor an annihilation exceeds 90% for a component.
+If the electron-capture probability is very high and the prompt-gamma probability is very low, event generation can become inefficient because the source retries until at least one primary vertex is created. The code emits a warning when the probability of producing neither a prompt gamma nor an annihilation exceeds 90% for a component. If no component with a non-zero fraction can produce a vertex (electron-capture probability ``1`` and prompt-gamma probability ``0`` in all of them), the source would never emit and the simulation stops with an error.
 
 .. _positronium_source_branches-label:
 
@@ -883,7 +881,7 @@ Hits produced by ``PositroniumSource`` carry four additional integer branches in
 
 The same four branches can also be written to the **Singles** and **Coincidences** trees, in the latter with the ``1`` and ``2`` suffix for the two arms of the pair. They are off by default there and are enabled with ``/gate/output/root/PositroniumSourceOutput true``; the merging rules applied by the digitizer are described in :ref:`decay_branches_root_output-label`.
 
-The ``decayIndex`` value is copied to all gammas emitted from the same sampled component. In the explicit ``setDecayKinds`` workflow, the index follows the order of components in the user-defined vectors. When the source is configured through ``setPositronInteractions``, the helper may internally expand one user component into several annihilation channels, so ``decayIndex`` refers to the final internal component list used by the model.
+The ``decayIndex`` value is copied to all gammas emitted from the same sampled component. The index follows the order of components in the user-defined vectors.
 
 .. table:: Description of values in gammaType branch for PositroniumSource
    :widths: auto
@@ -919,7 +917,7 @@ The ``decayIndex`` value is copied to all gammas emitted from the same sampled c
    | 4     | direct annihilation without positronium formation             |
    +-------+---------------------------------------------------------------+
 
-The values observed in ``sourceType`` are assigned by ``GatePositroniumDecayModel::GetSourceKind`` from the sampled interaction kind. For this reason, meaningful ``sourceType`` values require ``setPositronInteractions`` to be configured.
+The values observed in ``sourceType`` are assigned by ``GatePositroniumDecayModel::GetSourceKind`` from the interaction kind of the sampled component, as set with ``setPositronInteractions``.
 
 .. table:: Description of values in decayType branch for PositroniumSource
    :widths: auto

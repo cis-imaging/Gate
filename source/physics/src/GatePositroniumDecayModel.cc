@@ -101,12 +101,10 @@ GateEmittedGammaInformation::DecayModel GatePositroniumDecayModel::GetDecayModel
 
 GateEmittedGammaInformation::SourceKind GatePositroniumDecayModel::GetSourceKind(int decayIndex) const
 {
-  // fPositronInteractions is only populated when setPositronInteractions is explicitly called.
-  // We intentionally do not fall back to inferring SourceKind from fDecayKind because
-  // k2Gamma does not uniquely identify pPs: oPs pick-off/quenching also produces 2 gammas.
-  if (decayIndex >= static_cast<int>(fModelParams.fPositronInteractions.size()))
-    return GateEmittedGammaInformation::SourceKind::NotDefined;
-
+  // SourceKind is taken from the interaction kind of the channel. setPositronInteractions is
+  // required and has one entry per channel (checked by GatePositroniumDecayParamsGenerator).
+  // It is not inferred from fDecayKind, because k2Gamma does not uniquely identify pPs:
+  // oPs pick-off/quenching also produces 2 gammas.
   const PositronElectronInteraction interaction = fModelParams.fPositronInteractions[decayIndex];
   switch (interaction)
   {

@@ -23,6 +23,13 @@ public:
   GatePositroniumHelper() {};
   virtual ~GatePositroniumHelper() {};
 
+  /// Expands each non-pPs component into a 2-gamma and a 3-gamma channel, with intensities
+  /// derived from the lifetimes, and appends a pPs channel.
+  /// NOTE: currently not used anywhere. GatePositroniumDecayParamsGenerator requires
+  /// setDecayKinds and maps every user component to exactly one channel. Kept for possible
+  /// future use; CalcFractionsFromLifetime and CalcPPsFractionFromOPs are only called from here.
+  /// The function expands neither fMeanPositronRangeEnabled nor, when it is empty,
+  /// fMeanPositronRange - fix that before using it again.
   struct PositroniumDecayModelParams CalculateFractionsFromLifetimes(struct PositroniumDecayModelParams params);
   float CalcPPsFractionFromOPs(std::vector<float> fractions, std::vector<PositronElectronInteraction> decays);
   std::pair<float, float> CalcFractionsFromLifetime(float intensity, float lifetime, PositronElectronInteraction inter);

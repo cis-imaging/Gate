@@ -9,7 +9,7 @@
  *  Emails: wojciech.krzemien@ncbj.gov.pl, mateusz.bala@ncbj.gov.pl and kamil.dulski@gmail.com
  *  Organization: National Centre For Nuclear Research (NCBJ, https://ncbj.gov.pl), Poland
  *  Developed within the IMPET project: https://pet.ncbj.gov.pl/
- *  About class: Builder that assembles and validates a PositroniumDecayModelParams from individually set parameters; supports three preset modes (para-Ps only, ortho-Ps only, and mixed Ps with user-defined components including electron capture).
+ *  About class: Builder that assembles and validates a PositroniumDecayModelParams from individually set parameters. Every user-defined component is exactly one decay channel of the model.
  **/
 
 #ifndef GatePositroniumDecayParamsGenerator_hh
@@ -21,9 +21,14 @@
 #include "GatePositroniumDecayModelParams.hh"
 
 /*! class GatePositroniumDecayParamsGenerator
- *  brief Brief class description
+ *  brief Builds PositroniumDecayModelParams for GatePositroniumDecayModel.
  *
- *  Detailed description
+ *  Decay kinds, positron interactions, fractions, lifetimes, prompt-gamma probabilities and
+ *  prompt-gamma energies are required. Electron capture probabilities (default 0) and mean
+ *  positron ranges (default: range disabled) are optional. All vectors must have one entry
+ *  per decay kind; a missing required parameter or a length mismatch is reported with GateError.
+ *  A kParaPs channel must be k2Gamma. Fractions must be non-negative with a positive sum.
+ *  At least one channel with a non-zero fraction must be able to produce a vertex.
  */
 
 
@@ -48,6 +53,11 @@ public:
 
 
 private:
+  void RaiseErrorIfModelParamsNotSet() const;
+  void RaiseErrorIfModelParamsSizesDiffer() const;
+  void RaiseErrorIfChannelsUnphysical() const;
+  void RaiseErrorIfFractionsInvalid() const;
+
   std::optional<std::vector<float>> fPositroniumFractions;
   std::optional<std::vector<float>> fPositroniumLifetimes;
   std::optional<std::vector<float>> fPromptGammaProbabilities;
@@ -55,7 +65,6 @@ private:
   std::optional<std::vector<float>> fElectronCaptureProbabilities;
   std::optional<std::vector<PositroniumDecayKind>> fDecayKinds;
   std::optional<std::vector<PositronElectronInteraction>> fPositronInteractions;
-  std::optional<std::vector<bool>> fMeanPositronRangeEnabled;
   std::optional<std::vector<float>> fMeanPositronRange;
 };
 #endif
