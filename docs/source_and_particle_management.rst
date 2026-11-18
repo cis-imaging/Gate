@@ -865,7 +865,7 @@ For each event, the source first samples the source time and position from the s
 
 If ``setMeanPositronRange`` is used, the annihilation vertex position is additionally smeared around the sampled source position.
 
-If the electron-capture probability is very high and the prompt-gamma probability is very low, event generation can become inefficient because the source retries until at least one primary vertex is created. The code emits a warning when the probability of producing neither a prompt gamma nor an annihilation exceeds 90% for a component.
+If the electron-capture probability is very high and the prompt-gamma probability is very low, event generation can become inefficient because the source retries until at least one primary vertex is created. The code emits a warning when the probability of producing neither a prompt gamma nor an annihilation exceeds 90% for a component. If no component with a non-zero fraction can produce a vertex (electron-capture probability ``1`` and prompt-gamma probability ``0`` in all of them), the source would never emit and the simulation stops with an error.
 
 .. _positronium_source_branches-label:
 

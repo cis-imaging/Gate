@@ -179,12 +179,26 @@ void GatePositroniumDecayParamsGenerator::validatePositroniumDecayParams(const P
               "not every per-channel parameter vector has " << nChannels << " elements");
   }
 
+  // GatePositroniumDecayModel::GeneratePrimaryVertices samples a channel again until at least
+  // one vertex is produced. A channel that never produces a vertex (electron capture 1, prompt
+  // probability 0) only wastes samples, but if every channel that can be sampled is like that,
+  // the loop never ends.
   constexpr double kProb_of_no_particle_limit = 0.9;
+  bool anySampledChannelEmits = false;
   for (std::size_t i = 0; i < nChannels; ++i) {
     const double electronCaptureProb = params.fElectronCaptureProbabilities[i];
     const double noPromptProb = 1.0 - params.fPromptGammaProbabilities[i];
-    if (electronCaptureProb * noPromptProb >= kProb_of_no_particle_limit) {
+    const double noVertexProb = electronCaptureProb * noPromptProb;
+    if (noVertexProb >= kProb_of_no_particle_limit) {
       GateWarning("The probability of 0 prompt emission times probability of electron capture (no anihillation) is larger than 90%. Please check channel definitions! Otherwise simulations can take a lot of time");
     }
+    if (params.fFractions[i] > 0.0f && noVertexProb < 1.0) {
+      anySampledChannelEmits = true;
+    }
+  }
+  if (!anySampledChannelEmits) {
+    GateError("GatePositroniumDecayParamsGenerator::validatePositroniumDecayParams: "
+              "no channel with a non-zero fraction can produce a vertex (electron capture "
+              "probability 1 and prompt gamma probability 0); the source would never emit");
   }
 }

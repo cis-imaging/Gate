@@ -28,6 +28,7 @@
  *  positron ranges (default: range disabled) are optional. All vectors must have one entry
  *  per decay kind; a missing required parameter or a length mismatch is reported with GateError.
  *  A kParaPs channel must be k2Gamma. Fractions must be non-negative with a positive sum.
+ *  At least one channel with a non-zero fraction must be able to produce a vertex.
  */
 
 
