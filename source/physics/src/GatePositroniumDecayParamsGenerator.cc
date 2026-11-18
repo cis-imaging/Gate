@@ -112,11 +112,32 @@ void GatePositroniumDecayParamsGenerator::RaiseErrorIfChannelsUnphysical() const
   }
 }
 
+void GatePositroniumDecayParamsGenerator::RaiseErrorIfFractionsInvalid() const
+{
+  // Fractions are relative weights normalized by GatePositroniumHelper::NormalizeFractions.
+  // A negative weight gives probabilities outside [0, 1]; a zero sum cannot be normalized and
+  // makes the model always pick the last channel.
+  double sum = 0.0;
+  for (std::size_t i = 0; i < fPositroniumFractions->size(); ++i) {
+    const float fraction = (*fPositroniumFractions)[i];
+    if (fraction < 0.0f) {
+      GateError("GatePositroniumDecayParamsGenerator::RaiseErrorIfFractionsInvalid: "
+                "fraction of channel " << i << " is negative (" << fraction << ")");
+    }
+    sum += fraction;
+  }
+  if (sum <= 0.0) {
+    GateError("GatePositroniumDecayParamsGenerator::RaiseErrorIfFractionsInvalid: "
+              "sum of positronium decay fractions must be positive");
+  }
+}
+
 PositroniumDecayModelParams GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams() const
 {
   RaiseErrorIfModelParamsNotSet();
   RaiseErrorIfModelParamsSizesDiffer();
   RaiseErrorIfChannelsUnphysical();
+  RaiseErrorIfFractionsInvalid();
 
   // Every user-defined component is exactly one channel of the model (setDecayKinds and
   // setPositronInteractions are both required). Nothing is expanded here, so all vectors

@@ -75,7 +75,7 @@ G4UIcmdWith3VectorAndUnit* GatePositroniumSourceMessenger::GetVectorCmdWithUnit(
 
 void GatePositroniumSourceMessenger::InitCommands()
 {
- upCmdSetPositroniumFractions.reset(GetStringCmd( "setPositroniumFractions", "\"f1 f2 ... fn\" - where fi in [0.0, 1.0] and sum of all fi ==1" ) );
+ upCmdSetPositroniumFractions.reset(GetStringCmd( "setPositroniumFractions", "\"f1 f2 ... fn\" - where fi >= 0 are relative weights of the components, normalized internally; their sum must be positive" ) );
  upCmdSetPositroniumLifetimes.reset(GetStringCmd( "setPositroniumLifetimes", "\"t1 t2 ... tn t_unit\" - where ti corresponds to lifetime constants and t_unit is one of the Geant4 time units e.g. ns" ) );
  upCmdSetDecayKinds.reset(GetStringCmd( "setDecayKinds", "\"k1 k2 ... kn\" - where ki is k2Gamma or k3Gamma, one entry per component (required)" ) );
  upCmdSetPositronInteractions.reset(GetStringCmd( "setPositronInteractions", "\"k1 k2 ... kn\" - where ki is kParaPs, kDirect or kOrthoPs, one entry per component (required). Used to tag the sourceType of the emitted gammas" ) );

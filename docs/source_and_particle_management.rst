@@ -817,7 +817,7 @@ Required commands
 ^^^^^^^^^^^^^^^^^
 
 ``/gate/source/NAME/setPositroniumFractions f1 f2 ... fn``
-   Relative weights of the configured components. The implementation normalizes the vector internally, but the values should represent the intended relative intensities.
+   Relative weights of the configured components. The implementation normalizes the vector internally, but the values should represent the intended relative intensities. The weights must be non-negative and their sum must be positive; a component with weight ``0`` is never sampled.
 
 ``/gate/source/NAME/setPositroniumLifetimes t1 t2 ... tn unit``
    Lifetime of each component. The last token is a Geant4 time unit such as ``ns``.
