@@ -832,7 +832,7 @@ Required commands
    Annihilation channel of each component. Allowed values are ``k2Gamma`` and ``k3Gamma``. The number of entries defines the number of components; every other per-component vector must have the same length.
 
 ``/gate/source/NAME/setPositronInteractions k1 k2 ... kn``
-   Interaction type assigned to each component. Allowed values are ``kParaPs``, ``kDirect`` and ``kOrthoPs``. It is used to derive the ``sourceType`` metadata stored in the **Hits**, **Singles** and **Coincidences** trees.
+   Interaction type assigned to each component. Allowed values are ``kParaPs``, ``kDirect`` and ``kOrthoPs``. It is used to derive the ``sourceType`` metadata stored in the **Hits**, **Singles** and **Coincidences** trees. A ``kParaPs`` component must use ``k2Gamma``; ``kOrthoPs`` and ``kDirect`` components may use either decay kind.
 
 .. note::
 

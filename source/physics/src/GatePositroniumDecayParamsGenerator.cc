@@ -99,10 +99,24 @@ void GatePositroniumDecayParamsGenerator::RaiseErrorIfModelParamsSizesDiffer() c
   }
 }
 
+void GatePositroniumDecayParamsGenerator::RaiseErrorIfChannelsUnphysical() const
+{
+  // Para-positronium annihilates into an even number of gammas, so a kParaPs channel cannot
+  // be k3Gamma. kOrthoPs + k2Gamma (pick-off, quenching) and kDirect + k3Gamma are allowed.
+  for (std::size_t i = 0; i < fDecayKinds->size(); ++i) {
+    if ((*fPositronInteractions)[i] == PositronElectronInteraction::kParaPs &&
+        (*fDecayKinds)[i] == PositroniumDecayKind::k3Gamma) {
+      GateError("GatePositroniumDecayParamsGenerator::RaiseErrorIfChannelsUnphysical: "
+                "channel " << i << " is kParaPs with k3Gamma; para-positronium decays into 2 gammas");
+    }
+  }
+}
+
 PositroniumDecayModelParams GatePositroniumDecayParamsGenerator::generatePositroniumDecayParams() const
 {
   RaiseErrorIfModelParamsNotSet();
   RaiseErrorIfModelParamsSizesDiffer();
+  RaiseErrorIfChannelsUnphysical();
 
   // Every user-defined component is exactly one channel of the model (setDecayKinds and
   // setPositronInteractions are both required). Nothing is expanded here, so all vectors

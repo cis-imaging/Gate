@@ -27,6 +27,7 @@
  *  prompt-gamma energies are required. Electron capture probabilities (default 0) and mean
  *  positron ranges (default: range disabled) are optional. All vectors must have one entry
  *  per decay kind; a missing required parameter or a length mismatch is reported with GateError.
+ *  A kParaPs channel must be k2Gamma.
  */
 
 
@@ -53,6 +54,7 @@ public:
 private:
   void RaiseErrorIfModelParamsNotSet() const;
   void RaiseErrorIfModelParamsSizesDiffer() const;
+  void RaiseErrorIfChannelsUnphysical() const;
 
   std::optional<std::vector<float>> fPositroniumFractions;
   std::optional<std::vector<float>> fPositroniumLifetimes;
